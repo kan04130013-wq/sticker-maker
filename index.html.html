@@ -1,0 +1,1693 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>One Click Sticker · 一鍵 LINE 貼圖工坊</title>
+<meta name="description" content="上傳一張照片，自動生成 12 張表情貼圖，一鍵打包成 LINE 上架格式。" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg-deep: #0F0B1E;
+    --bg-surface: #1A1432;
+    --bg-card: #221A3F;
+    --bg-input: #15102A;
+    --border: rgba(167, 139, 250, 0.18);
+    --border-strong: rgba(167, 139, 250, 0.4);
+    --text: #F5F3FF;
+    --text-2: #B8AED1;
+    --text-3: #6B6486;
+    --accent: #C4FF3D;
+    --accent-glow: rgba(196, 255, 61, 0.35);
+    --accent-dark: #95C924;
+    --violet: #A78BFA;
+    --violet-soft: rgba(167, 139, 250, 0.15);
+    --rose: #FB7185;
+    --sticker-bg: #A8E063;
+    --sticker-bg-dark: #8BC53F;
+    --danger: #FB7185;
+    --success: #4ADE80;
+    --warning: #FCD34D;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-deep); color: var(--text);
+    font-family: 'Inter', 'Noto Sans TC', -apple-system, sans-serif;
+    line-height: 1.6; -webkit-font-smoothing: antialiased; min-height: 100vh;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(circle at 15% 20%, rgba(167, 139, 250, 0.12) 0%, transparent 40%),
+      radial-gradient(circle at 85% 80%, rgba(196, 255, 61, 0.08) 0%, transparent 40%);
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, textarea, select { font-family: inherit; font-size: 15px; color: var(--text); }
+  .app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* TOPBAR */
+  .topbar { padding: 20px 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .topbar-row { display: flex; align-items: center; gap: 12px; }
+  .icon-btn { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; color: var(--text-2); padding: 8px 12px; border-radius: 8px; font-size: 14px; transition: all 0.15s; }
+  .icon-btn:hover { background: var(--violet-soft); color: var(--text); }
+  .icon-btn svg { width: 16px; height: 16px; }
+
+  .status-pill { padding: 6px 12px; border-radius: 999px; font-size: 11px; font-weight: 700; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.06em; border: 1px solid var(--border); }
+  .status-pill.warn { background: rgba(251, 113, 133, 0.1); color: var(--danger); border-color: rgba(251, 113, 133, 0.3); }
+  .status-pill.ok { background: rgba(196, 255, 61, 0.08); color: var(--accent); border-color: rgba(196, 255, 61, 0.3); }
+
+  /* HERO */
+  .hero { text-align: center; padding: 56px 24px 24px; }
+  .hero h1 { font-size: 56px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.05; margin-bottom: 14px; }
+  .hero h1 .accent { color: var(--accent); text-shadow: 0 0 30px var(--accent-glow); }
+  .hero h1 .v3 { font-size: 32px; color: var(--violet); font-weight: 600; vertical-align: super; margin-left: 4px; }
+  .hero-sub { color: var(--text-2); font-size: 16px; max-width: 540px; margin: 0 auto; }
+
+  /* MAIN */
+  .main { flex: 1; max-width: 1200px; margin: 32px auto 60px; width: 100%; padding: 0 24px; }
+  .panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 24px; padding: 36px; box-shadow: 0 20px 60px rgba(15, 11, 30, 0.5); }
+  .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+
+  .step-title { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; margin-bottom: 18px; }
+  .step-title .num { color: var(--accent); font-weight: 800; }
+
+  /* UPLOAD */
+  .upload-zone { aspect-ratio: 1; border: 2px dashed var(--border-strong); border-radius: 20px; background: var(--bg-input); display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
+  .upload-zone:hover { border-color: var(--accent); background: rgba(196, 255, 61, 0.04); }
+  .upload-zone.has-image { border-style: solid; padding: 0; cursor: default; }
+  .upload-zone input { display: none; }
+  .upload-icon { width: 56px; height: 56px; border-radius: 50%; background: var(--violet-soft); display: flex; align-items: center; justify-content: center; color: var(--violet); }
+  .upload-icon svg { width: 28px; height: 28px; }
+  .upload-text { text-align: center; color: var(--text-2); font-size: 14px; }
+  .upload-text b { color: var(--text); display: block; font-size: 16px; margin-bottom: 4px; }
+  .upload-img-wrap { width: 100%; height: 100%; position: relative; background: var(--bg-input); }
+  .upload-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .upload-replace { position: absolute; bottom: 12px; right: 12px; padding: 8px 14px; background: rgba(15, 11, 30, 0.85); backdrop-filter: blur(8px); border: 1px solid var(--border-strong); color: var(--text); border-radius: 999px; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .upload-replace:hover { background: var(--bg-deep); }
+  .upload-replace svg { width: 14px; height: 14px; }
+
+  /* INSPIRATION */
+  .inspiration-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 22px; }
+  .inspiration-title { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .inspiration-desc { font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+
+  /* THEME CHIPS */
+  .theme-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .theme-chip {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    color: var(--text-2);
+    font-size: 12px;
+    transition: all 0.15s;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  .theme-chip:hover { background: var(--violet-soft); color: var(--text); border-color: var(--violet); }
+  .theme-chip.active { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); font-weight: 700; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; background: var(--bg-input); color: var(--text); border: 1px solid var(--border-strong); border-radius: 10px; font-weight: 600; font-size: 14px; transition: all 0.15s; }
+  .btn:hover:not(:disabled) { background: var(--violet-soft); border-color: var(--violet); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.full { width: 100%; }
+  .btn.primary { background: var(--accent); color: var(--bg-deep); border-color: var(--accent); font-weight: 700; }
+  .btn.primary:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); box-shadow: 0 0 24px var(--accent-glow); }
+  .btn.danger { color: var(--danger); border-color: rgba(251,113,133,0.3); }
+  .btn.danger:hover:not(:disabled) { background: rgba(251,113,133,0.1); border-color: var(--danger); }
+  .btn.large { padding: 16px 28px; font-size: 16px; border-radius: 14px; }
+  .btn svg { width: 14px; height: 14px; }
+  .btn.large svg { width: 18px; height: 18px; }
+
+  /* FIELDS */
+  textarea.field, input.field, select.field { width: 100%; padding: 12px 14px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; transition: all 0.15s; font-family: 'Noto Sans TC', sans-serif; }
+  textarea.field { resize: vertical; min-height: 64px; line-height: 1.5; margin-bottom: 12px; }
+  textarea.field:focus, input.field:focus, select.field:focus { outline: none; border-color: var(--violet); background: var(--bg-deep); }
+  textarea.field::placeholder, input.field::placeholder { color: var(--text-3); }
+
+  /* EMOTION GRID */
+  .emotion-label { font-size: 14px; color: var(--text-2); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+  .selected-count { color: var(--accent); font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .emotion-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 18px; }
+  .emotion-btn { padding: 14px 8px; background: transparent; border: 1.5px solid var(--border-strong); border-radius: 12px; color: var(--text-2); font-weight: 600; font-size: 14px; transition: all 0.15s; position: relative; font-family: 'Noto Sans TC', sans-serif; }
+  .emotion-btn:hover:not(.active) { border-color: var(--violet); color: var(--text); background: var(--violet-soft); }
+  .emotion-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(196, 255, 61, 0.08); box-shadow: 0 0 0 1px var(--accent); }
+  .emotion-btn.active::after { content: ''; position: absolute; top: 6px; right: 6px; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .select-all-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .select-all-row .btn { flex: 1; padding: 8px 12px; font-size: 13px; }
+
+  /* TOGGLES */
+  .toggles { display: flex; flex-wrap: wrap; gap: 18px; padding: 16px; background: var(--bg-card); border-radius: 12px; margin-bottom: 14px; }
+  .toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .toggle input { display: none; }
+  .toggle-track { width: 36px; height: 20px; background: var(--bg-deep); border: 1px solid var(--border); border-radius: 999px; position: relative; transition: all 0.2s; }
+  .toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; background: var(--text-3); border-radius: 50%; transition: all 0.2s; }
+  .toggle input:checked + .toggle-track { background: var(--accent); border-color: var(--accent); }
+  .toggle input:checked + .toggle-track::after { transform: translateX(16px); background: var(--bg-deep); }
+  .toggle-label { font-size: 14px; color: var(--text); font-weight: 500; }
+
+  /* ADVANCED ACCORDION */
+  .advanced { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 18px; overflow: hidden; }
+  .advanced-head { padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; font-size: 13px; font-weight: 600; color: var(--text-2); }
+  .advanced-head:hover { color: var(--text); }
+  .advanced-head .arrow { transition: transform 0.2s; }
+  .advanced.open .advanced-head .arrow { transform: rotate(90deg); }
+  .advanced-body { padding: 0 16px 16px; display: none; }
+  .advanced.open .advanced-body { display: block; }
+
+  .seg-control { display: flex; padding: 3px; background: var(--bg-deep); border-radius: 8px; gap: 2px; }
+  .seg-control button { flex: 1; background: transparent; border: none; padding: 8px 10px; color: var(--text-2); font-size: 12px; font-weight: 600; border-radius: 6px; transition: all 0.15s; }
+  .seg-control button.active { background: var(--violet-soft); color: var(--accent); }
+  .seg-control + .hint { font-size: 11px; color: var(--text-3); margin-top: 6px; line-height: 1.5; }
+
+  /* CTA */
+  .cta-row { display: flex; justify-content: center; gap: 12px; margin-top: 8px; }
+
+  /* STATUS */
+  .status { margin-top: 24px; padding: 14px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-family: 'JetBrains Mono', monospace; }
+  .status.ok { border-color: var(--success); color: var(--success); }
+  .status.err { border-color: var(--danger); color: var(--danger); }
+  .spinner { width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-bar { flex: 1; height: 4px; background: var(--bg-deep); border-radius: 999px; overflow: hidden; }
+  .progress-bar > div { height: 100%; background: var(--accent); transition: width 0.3s; }
+
+  /* RESULTS */
+  .results-section { margin-top: 48px; }
+  .results-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+  .results-header h2 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .results-header h2 em { font-style: normal; color: var(--accent); }
+  .results-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .results-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+
+  /* PACKAGING PANEL */
+  .pack-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 18px 22px; margin-bottom: 24px; }
+  .pack-panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .pack-panel-head h3 { font-size: 15px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .pack-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .pack-opt { display: flex; gap: 10px; align-items: flex-start; padding: 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all 0.15s; }
+  .pack-opt:hover { border-color: var(--violet); }
+  .pack-opt.active { border-color: var(--accent); background: rgba(196, 255, 61, 0.05); }
+  .pack-opt input { display: none; }
+  .pack-checkbox { width: 18px; height: 18px; border: 1.5px solid var(--text-3); border-radius: 4px; flex-shrink: 0; margin-top: 2px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .pack-opt.active .pack-checkbox { border-color: var(--accent); background: var(--accent); }
+  .pack-checkbox svg { width: 12px; height: 12px; color: var(--bg-deep); opacity: 0; transition: opacity 0.15s; }
+  .pack-opt.active .pack-checkbox svg { opacity: 1; }
+  .pack-opt-text { font-size: 13px; color: var(--text); }
+  .pack-opt-text b { display: block; font-weight: 600; margin-bottom: 2px; }
+  .pack-opt-text span { font-size: 11px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+
+  /* STICKER CARD */
+  .sticker-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; transition: all 0.2s; position: relative; }
+  .sticker-card:hover { border-color: var(--violet); transform: translateY(-2px); }
+  .sticker-card.is-main { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .sticker-card.is-main::before { content: '主圖'; position: absolute; top: 8px; left: 8px; z-index: 2; padding: 3px 8px; background: var(--accent); color: var(--bg-deep); font-size: 11px; font-weight: 700; border-radius: 4px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em; }
+  .sticker-img-wrap { aspect-ratio: 1; background: var(--sticker-bg); background-image: linear-gradient(135deg, var(--sticker-bg) 0%, var(--sticker-bg-dark) 100%); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; cursor: pointer; }
+  .sticker-img-wrap.transparent { background: transparent; background-image: linear-gradient(45deg, var(--bg-card) 25%, transparent 25%, transparent 75%, var(--bg-card) 75%), linear-gradient(45deg, var(--bg-card) 25%, var(--bg-input) 25%, var(--bg-input) 75%, var(--bg-card) 75%); background-size: 20px 20px; background-position: 0 0, 10px 10px; }
+  .sticker-img-wrap img { width: 88%; height: 88%; object-fit: contain; transition: transform 0.3s ease; }
+  .sticker-card.animate:hover .sticker-img-wrap img { animation: bounce 0.6s ease infinite; }
+  @keyframes bounce {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.08) rotate(-4deg); }
+    75% { transform: scale(1.08) rotate(4deg); }
+  }
+  .sticker-img-wrap.empty { background: var(--bg-input); background-image: none; }
+  .sticker-img-wrap.empty .placeholder { color: var(--text-3); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .sticker-img-wrap.loading { background: var(--bg-card); background-image: none; }
+  .sticker-img-wrap.error { background: rgba(251, 113, 133, 0.1); background-image: none; flex-direction: column; gap: 8px; color: var(--danger); font-size: 12px; text-align: center; padding: 12px; }
+  .sticker-num { position: absolute; top: 8px; right: 8px; padding: 3px 7px; background: rgba(15, 11, 30, 0.7); color: white; font-size: 11px; font-weight: 700; border-radius: 4px; font-family: 'JetBrains Mono', monospace; backdrop-filter: blur(4px); }
+  .sticker-meta { padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .sticker-meta .label { font-size: 14px; font-weight: 600; color: var(--text); }
+  .sticker-meta .actions { display: flex; gap: 2px; }
+  .sticker-meta .actions button { background: transparent; border: none; width: 28px; height: 28px; border-radius: 6px; color: var(--text-3); display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .sticker-meta .actions button:hover { background: var(--violet-soft); color: var(--accent); }
+  .sticker-meta .actions button.set-main:hover { color: var(--accent); }
+  .sticker-meta .actions button svg { width: 14px; height: 14px; }
+
+  /* MODAL */
+  .modal-bg { position: fixed; inset: 0; background: rgba(15, 11, 30, 0.85); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 24px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: 20px; padding: 32px; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+  .modal h2 .accent { color: var(--accent); }
+  .modal p { color: var(--text-2); font-size: 14px; margin-bottom: 18px; }
+  .modal a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .modal a:hover { text-decoration: underline; }
+  .modal label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; margin-top: 14px; color: var(--text); }
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+  .modal .hint { font-size: 12px; color: var(--text-3); margin-top: 6px; line-height: 1.5; }
+
+  /* PREVIEW MODAL */
+  .preview-modal { background: transparent; border: none; max-width: 600px; padding: 0; }
+  .preview-img-wrap { background: var(--sticker-bg); background-image: linear-gradient(135deg, var(--sticker-bg) 0%, var(--sticker-bg-dark) 100%); border-radius: 24px; padding: 40px; text-align: center; }
+  .preview-img-wrap.transparent { background: transparent; background-image: linear-gradient(45deg, var(--bg-card) 25%, transparent 25%, transparent 75%, var(--bg-card) 75%), linear-gradient(45deg, var(--bg-card) 25%, var(--bg-input) 25%, var(--bg-input) 75%, var(--bg-card) 75%); background-size: 30px 30px; background-position: 0 0, 15px 15px; }
+  .preview-img-wrap img { max-width: 100%; max-height: 60vh; }
+  .preview-actions { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .preview-toggle { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: rgba(15, 11, 30, 0.7); backdrop-filter: blur(8px); border-radius: 999px; color: var(--text-2); font-size: 13px; }
+  .preview-toggle .toggle-track { transform: scale(0.85); }
+
+  /* HISTORY */
+  .history-drawer { position: fixed; top: 0; right: -400px; width: 380px; height: 100vh; background: var(--bg-surface); border-left: 1px solid var(--border-strong); z-index: 99; transition: right 0.25s ease; overflow-y: auto; padding: 24px; }
+  .history-drawer.open { right: 0; }
+  .history-drawer h3 { font-size: 18px; font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; }
+  .history-drawer h3 button { background: transparent; border: none; color: var(--text-3); font-size: 24px; cursor: pointer; padding: 0; line-height: 1; }
+  .history-list { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .history-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px; cursor: pointer; display: flex; align-items: center; gap: 12px; }
+  .history-item:hover { border-color: var(--violet); }
+  .history-item img { width: 44px; height: 44px; border-radius: 8px; background: var(--sticker-bg); object-fit: contain; }
+  .history-item .info { flex: 1; min-width: 0; }
+  .history-item .info .title { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-item .info .meta { font-size: 11px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; }
+  .history-empty { color: var(--text-3); font-size: 13px; text-align: center; padding: 24px; font-family: 'JetBrains Mono', monospace; }
+
+  .hidden { display: none !important; }
+
+  @media (max-width: 900px) {
+    .hero h1 { font-size: 36px; }
+    .hero h1 .v3 { font-size: 22px; }
+    .topbar { padding: 16px 20px; }
+    .panel { padding: 24px; border-radius: 16px; }
+    .panel-grid { grid-template-columns: 1fr; gap: 28px; }
+    .results-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .history-drawer { width: 100%; right: -100%; }
+    .toggles { gap: 14px; padding: 14px; }
+    .pack-options { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .hero { padding: 32px 16px 8px; }
+    .main { padding: 0 16px; margin-top: 24px; }
+    .results-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-row">
+      <button class="icon-btn" onclick="openHistory()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>生成紀錄</span>
+      </button>
+    </div>
+    <div class="topbar-row">
+      <span id="status-pill" class="status-pill warn">需要 API KEY</span>
+      <button class="icon-btn" onclick="openSettings()" title="設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>One <span class="accent">Click</span> Sticker<span class="v3">v3</span></h1>
+    <p class="hero-sub">將您的照片變成獨一無二的聊天貼圖，一鍵打包成 LINE 上架格式</p>
+  </section>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="panel">
+      <div class="panel-grid">
+
+        <!-- 左：上傳 -->
+        <div>
+          <div class="step-title"><span class="num">1.</span> 您的照片</div>
+          <label class="upload-zone" id="upload-zone">
+            <input type="file" id="upload-input" accept="image/*" />
+            <div id="upload-empty">
+              <div class="upload-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              </div>
+              <div class="upload-text">
+                <b>點擊上傳照片</b>
+                支援 JPG / PNG · 建議方形構圖
+              </div>
+            </div>
+            <div id="upload-preview" class="upload-img-wrap hidden">
+              <img id="upload-img" alt="" />
+              <span class="upload-replace" onclick="event.preventDefault(); document.getElementById('upload-input').click();">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                更換
+              </span>
+            </div>
+          </label>
+        </div>
+
+        <!-- 右：選擇 -->
+        <div>
+          <div class="step-title"><span class="num">2.</span> 選擇貼圖</div>
+
+          <!-- 靈感 -->
+          <div class="inspiration-box">
+            <div class="inspiration-title">
+              <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+              AI 貼圖創意產生器
+            </div>
+            <div class="inspiration-desc">描述一個主題，或讓 AI 從您的照片找靈感</div>
+            <textarea id="theme-input" class="field" placeholder="例如：我家愛搗蛋的橘貓、辦公室專用..."></textarea>
+            <div style="display:flex; gap:8px;">
+              <button class="btn" style="flex:1;" onclick="generateIdeasFromImage()" id="ai-inspire-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.08-7.08l4.24-4.24"/></svg>
+                從圖片取得靈感
+              </button>
+            </div>
+
+            <!-- 主題快選 -->
+            <div style="margin-top: 14px;">
+              <div style="font-size: 12px; color: var(--text-3); margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.05em;">熱門主題</div>
+              <div class="theme-chips" id="theme-chips">
+                <button class="theme-chip" data-theme="社畜日常">社畜日常</button>
+                <button class="theme-chip" data-theme="可愛寵物">可愛寵物</button>
+                <button class="theme-chip" data-theme="情侶撒嬌">情侶撒嬌</button>
+                <button class="theme-chip" data-theme="阿嬤碎念">阿嬤碎念</button>
+                <button class="theme-chip" data-theme="學生考試">學生考試</button>
+                <button class="theme-chip" data-theme="健身狂熱">健身狂熱</button>
+                <button class="theme-chip" data-theme="媽媽群組">媽媽群組</button>
+                <button class="theme-chip" data-theme="業務話術">業務話術</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 表情 -->
+          <div class="emotion-label">
+            <span>選擇您想生成的反應</span>
+            <span><span id="selected-count" class="selected-count">0</span><span style="color:var(--text-3);font-family:'JetBrains Mono',monospace;font-size:12px;"> / 12</span></span>
+          </div>
+          <div class="select-all-row">
+            <button class="btn" onclick="selectAllEmotions(true)">全選</button>
+            <button class="btn" onclick="selectAllEmotions(false)">全不選</button>
+          </div>
+          <div class="emotion-grid" id="emotion-grid"></div>
+
+          <!-- 開關 -->
+          <div class="toggles">
+            <label class="toggle">
+              <input type="checkbox" id="toggle-anime" />
+              <span class="toggle-track"></span>
+              <span class="toggle-label">可愛動漫</span>
+            </label>
+            <label class="toggle">
+              <input type="checkbox" id="toggle-anim" checked />
+              <span class="toggle-track"></span>
+              <span class="toggle-label">動態預覽</span>
+            </label>
+          </div>
+
+          <!-- 文字模式 -->
+          <div style="background: var(--bg-card); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;">
+            <label style="font-size: 12px; color: var(--text-2); display: block; margin-bottom: 8px; font-weight: 600;">
+              文字疊加模式
+              <span style="color: var(--text-3); font-weight: 400; margin-left: 6px;">· 解決中文亂碼的關鍵</span>
+            </label>
+            <div class="seg-control" id="text-mode-control">
+              <button class="active" data-textmode="overlay-en" onclick="setTextMode('overlay-en')">英文後製</button>
+              <button data-textmode="ai-zh" onclick="setTextMode('ai-zh')">中文 AI 直生</button>
+              <button data-textmode="none" onclick="setTextMode('none')">純角色</button>
+            </div>
+            <div class="hint" id="text-mode-hint" style="font-size: 11px; color: var(--text-3); margin-top: 8px; line-height: 1.5;">
+              <b style="color:var(--text-2);">英文後製</b>：Canvas 疊加 LOL/UWU/GRRR 等英文，100% 不亂碼。
+            </div>
+          </div>
+
+          <!-- 進階 -->
+          <div class="advanced" id="advanced-panel">
+            <div class="advanced-head" onclick="document.getElementById('advanced-panel').classList.toggle('open')">
+              <span>進階選項</span>
+              <svg class="arrow" style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="advanced-body">
+              <label style="font-size: 12px; color: var(--text-2); display: block; margin-bottom: 6px; font-weight: 600;">生成模式</label>
+              <div class="seg-control">
+                <button class="active" data-mode="individual" onclick="setGenMode('individual')">個別生成</button>
+                <button data-mode="collage" onclick="setGenMode('collage')">拼貼一次生</button>
+              </div>
+              <div class="hint">
+                <b style="color:var(--text-2);">個別生成</b>：每張獨立呼叫 API，品質一致、可單張重試。<br>
+                <b style="color:var(--text-2);">拼貼一次生</b>：一次生成 3×4 大圖再切割，較省 API 額度但風格漂移風險高。
+              </div>
+            </div>
+          </div>
+
+          <!-- CTA -->
+          <div class="cta-row">
+            <button class="btn primary large full" id="generate-btn" onclick="generateSelected()">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg>
+              生成貼圖
+            </button>
+          </div>
+
+          <div id="status-area"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <section class="results-section hidden" id="results-section">
+      <div class="results-header">
+        <h2>您生成的<em>貼圖</em></h2>
+        <div class="results-actions">
+          <button class="btn" onclick="downloadGridImage()" title="拼貼成單張大圖">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            拼貼大圖
+          </button>
+          <button class="btn primary" onclick="openPackagingModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            一鍵上架包
+          </button>
+        </div>
+      </div>
+      <div class="results-grid" id="results-grid"></div>
+    </section>
+  </main>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-bg" id="settings-modal">
+  <div class="modal">
+    <h2><span class="accent">API</span> 設定</h2>
+    <p>這個工具由你的 Google Gemini API 驅動。Key 只儲存在這個瀏覽器的 localStorage，不會傳送至任何第三方。</p>
+    <p>還沒有 Key？到 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免費申請。</p>
+
+    <label>Gemini API Key</label>
+    <input type="password" id="api-key-input" class="field" placeholder="AIza..." />
+    <div class="hint">分享 HTML 給別人時不會帶著 Key。每個人需要自己的 Key。</div>
+
+    <label>影像模型</label>
+    <select id="model-select" class="field">
+      <option value="gemini-2.5-flash-image">Nano Banana · gemini-2.5-flash-image（推薦）</option>
+      <option value="imagen-4.0-generate-001">Imagen 4 · imagen-4.0-generate-001</option>
+    </select>
+    <div class="hint">Nano Banana 支援上傳照片參考、保持角色一致性。Imagen 4 純文生圖、畫質精緻但無法參考照片。</div>
+
+    <div class="modal-actions">
+      <button class="btn" style="flex:1;" onclick="closeSettings()">取消</button>
+      <button class="btn primary" style="flex:1;" onclick="saveSettings()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- PACKAGING MODAL -->
+<div class="modal-bg" id="packaging-modal">
+  <div class="modal" style="max-width: 600px;">
+    <h2>一鍵<span class="accent">上架包</span></h2>
+    <p>選擇你要打包的內容。完成後會下載一份 ZIP 檔，可直接用於 LINE 創作者後台上架。</p>
+
+    <div class="pack-options" id="pack-options">
+      <label class="pack-opt active" data-pack="stickers-noBg">
+        <input type="checkbox" checked>
+        <div class="pack-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="pack-opt-text"><b>貼圖（去背 PNG）</b><span>370×320 · LINE 規格</span></div>
+      </label>
+      <label class="pack-opt" data-pack="stickers-withBg">
+        <input type="checkbox">
+        <div class="pack-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="pack-opt-text"><b>貼圖（含綠底）</b><span>原始綠色背景版本</span></div>
+      </label>
+      <label class="pack-opt active" data-pack="main">
+        <input type="checkbox" checked>
+        <div class="pack-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="pack-opt-text"><b>主圖 main.png</b><span>240×240 · 商店封面</span></div>
+      </label>
+      <label class="pack-opt active" data-pack="tab">
+        <input type="checkbox" checked>
+        <div class="pack-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="pack-opt-text"><b>標籤圖 tab.png</b><span>96×74 · 聊天室小圖示</span></div>
+      </label>
+      <label class="pack-opt" data-pack="grid">
+        <input type="checkbox">
+        <div class="pack-checkbox"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="pack-opt-text"><b>拼貼大圖</b><span>4×3 預覽用拼圖</span></div>
+      </label>
+    </div>
+
+    <div style="margin-top:14px; padding: 12px 14px; background: var(--bg-input); border-radius: 8px; font-size: 12px; color: var(--text-2); line-height: 1.6;">
+      <div style="font-weight: 600; margin-bottom: 4px; color: var(--text);">📋 主圖會用</div>
+      <span id="main-source-info" style="font-family: 'JetBrains Mono', monospace; font-size: 11px;">選擇的「主圖」貼圖（點貼圖右下角星號設定）</span>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" style="flex:1;" onclick="closePackagingModal()">取消</button>
+      <button class="btn primary" style="flex:1;" onclick="downloadPackage()">
+        <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        下載 ZIP
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- PREVIEW MODAL -->
+<div class="modal-bg" id="preview-modal" onclick="if(event.target===this)closePreview()">
+  <div class="modal preview-modal">
+    <div id="preview-img-wrap" class="preview-img-wrap">
+      <img id="preview-img" alt="" />
+    </div>
+    <div class="preview-actions">
+      <label class="preview-toggle">
+        <input type="checkbox" id="preview-bg-toggle" onchange="togglePreviewBg()" style="display:none;">
+        <span class="toggle-track"></span>
+        <span>透明背景</span>
+      </label>
+      <button class="btn" onclick="closePreview()">關閉</button>
+      <button class="btn primary" onclick="downloadCurrentPreview()">
+        <svg style="width:14px;height:14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        下載這張
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="history-drawer" id="history-drawer">
+  <h3><span>生成紀錄</span><button onclick="closeHistory()">×</button></h3>
+  <p style="color: var(--text-3); font-size: 13px;">最近 20 組，存在本機</p>
+  <div class="history-list" id="history-list"></div>
+  <button class="btn full danger" style="margin-top: 24px;" onclick="clearHistory()">清除全部紀錄</button>
+</div>
+
+<canvas id="composite-canvas" style="display:none;"></canvas>
+
+<script>
+// =====================================================================
+// ▒▒▒▒▒  常數 & 狀態  ▒▒▒▒▒
+// =====================================================================
+
+const EMOTIONS = [
+  { key: '開心', en: 'YAY!',     zh: '好開心', pose: 'happily smiling with eyes squinted in joy', color: '#FF8FB1' },
+  { key: '傷心', en: 'SO SAD',   zh: '好傷心', pose: 'sad face with tears welling up in eyes', color: '#5B7FFF' },
+  { key: '大笑', en: 'LOL',      zh: '哈哈哈', pose: 'laughing hysterically with mouth wide open', color: '#FFC93C' },
+  { key: '生氣', en: 'GRRR',     zh: '氣噗噗', pose: 'angry red face with steam from ears', color: '#FF4848' },
+  { key: '愛心', en: 'UWU',      zh: '愛你喔', pose: 'eyes turned into pink hearts, blushing cheeks', color: '#FF6BB3' },
+  { key: 'OK',   en: 'OK!',      zh: '沒問題', pose: 'thumbs up gesture, confident smile', color: '#6FE7B7' },
+  { key: '問號', en: '???',      zh: '蛤?', pose: 'confused face with question marks above head', color: '#7AC6FF' },
+  { key: '想睡', en: 'Zzz',      zh: '想睡了', pose: 'sleeping with eyes closed, Zzz floating', color: '#B8A6FF' },
+  { key: '驚訝', en: 'WOW!',     zh: '蛤好誇張', pose: 'shocked surprised face, mouth open wide, sparkly eyes', color: '#FF9F43' },
+  { key: '思考', en: 'Hmm...',   zh: '讓我想想', pose: 'thoughtful pondering pose, hand on chin', color: '#A0C97A' },
+  { key: '難過', en: 'SNIFF...', zh: '嗚嗚', pose: 'crying with single tear, sad eyes', color: '#6BC4FF' },
+  { key: '拜託', en: 'Pls?',     zh: '拜託啦', pose: 'pleading puppy eyes, hands clasped together', color: '#FFB5D8' },
+];
+
+const STATE = {
+  apiKey: localStorage.getItem('ocs_api_key') || '',
+  model: localStorage.getItem('ocs_model') || 'gemini-2.5-flash-image',
+  uploadedImage: null,
+  selectedEmotions: new Set(),
+  results: {},
+  mainEmotion: null,
+  history: JSON.parse(localStorage.getItem('ocs_history') || '[]'),
+  preview: { dataUrl: null, dataUrlNoBg: null, emotion: null, showBg: true },
+  genMode: 'individual',
+  textMode: 'overlay-en',  // overlay-en / ai-zh / none
+};
+
+// =====================================================================
+// ▒▒▒▒▒  初始化 & UI 互動  ▒▒▒▒▒
+// =====================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildEmotionGrid();
+  bindUpload();
+  bindPackagingChecks();
+  bindThemeChips();
+  updateStatusPill();
+  showFileProtocolWarning();
+  if (!STATE.apiKey) setTimeout(openSettings, 600);
+});
+
+function bindThemeChips() {
+  document.querySelectorAll('.theme-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const theme = chip.dataset.theme;
+      document.getElementById('theme-input').value = theme;
+      document.querySelectorAll('.theme-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+  // 主題輸入框被改動時取消 chip 高亮
+  document.getElementById('theme-input').addEventListener('input', () => {
+    document.querySelectorAll('.theme-chip').forEach(c => c.classList.remove('active'));
+  });
+}
+
+function showFileProtocolWarning() {
+  if (window.location.protocol !== 'file:') return;
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:relative;z-index:50;padding:12px 24px;background:rgba(252,211,77,0.1);border-bottom:1px solid var(--warning);color:var(--warning);font-size:13px;text-align:center;font-family:"JetBrains Mono",monospace;';
+  banner.innerHTML = '⚠️ 您透過 file:// 開啟此檔案，呼叫 Google API 可能會被瀏覽器擋住（顯示 Failed to fetch）。建議改用本機伺服器：在資料夾執行 <code style="background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:3px;">python3 -m http.server</code>，然後打開 http://localhost:8000';
+  document.body.insertBefore(banner, document.body.firstChild);
+}
+
+function buildEmotionGrid() {
+  const grid = document.getElementById('emotion-grid');
+  grid.innerHTML = '';
+  EMOTIONS.forEach(e => {
+    const btn = document.createElement('button');
+    btn.className = 'emotion-btn';
+    btn.dataset.key = e.key;
+    btn.textContent = e.key;
+    btn.addEventListener('click', () => toggleEmotion(e.key));
+    grid.appendChild(btn);
+  });
+}
+
+function toggleEmotion(key) {
+  if (STATE.selectedEmotions.has(key)) STATE.selectedEmotions.delete(key);
+  else STATE.selectedEmotions.add(key);
+  refreshEmotionUI();
+}
+
+function selectAllEmotions(on) {
+  STATE.selectedEmotions.clear();
+  if (on) EMOTIONS.forEach(e => STATE.selectedEmotions.add(e.key));
+  refreshEmotionUI();
+}
+
+function refreshEmotionUI() {
+  document.querySelectorAll('.emotion-btn').forEach(b => {
+    b.classList.toggle('active', STATE.selectedEmotions.has(b.dataset.key));
+  });
+  document.getElementById('selected-count').textContent = STATE.selectedEmotions.size;
+}
+
+function setGenMode(mode) {
+  STATE.genMode = mode;
+  document.querySelectorAll('.advanced .seg-control button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+}
+
+function setTextMode(mode) {
+  STATE.textMode = mode;
+  document.querySelectorAll('#text-mode-control button').forEach(b => {
+    b.classList.toggle('active', b.dataset.textmode === mode);
+  });
+  const hint = document.getElementById('text-mode-hint');
+  if (mode === 'overlay-en') {
+    hint.innerHTML = '<b style="color:var(--text-2);">英文後製</b>：Canvas 疊加 LOL/UWU/GRRR 等英文，100% 不亂碼。';
+  } else if (mode === 'ai-zh') {
+    hint.innerHTML = '<b style="color:var(--text-2);">中文 AI 直生</b>：要求 Gemini 直接畫上繁中對白（如「拜託啦」「氣噗噗」）。需要新版 Nano Banana Pro，少數情況下可能漏字或亂碼。';
+  } else {
+    hint.innerHTML = '<b style="color:var(--text-2);">純角色</b>：完全不加文字，只生成角色表情。';
+  }
+}
+
+function bindUpload() {
+  document.getElementById('upload-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    STATE.uploadedImage = { dataUrl, base64: dataUrl.split(',')[1], mimeType: file.type };
+    document.getElementById('upload-img').src = dataUrl;
+    document.getElementById('upload-empty').classList.add('hidden');
+    document.getElementById('upload-preview').classList.remove('hidden');
+    document.getElementById('upload-zone').classList.add('has-image');
+  });
+}
+
+function fileToDataUrl(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function openSettings() {
+  document.getElementById('api-key-input').value = STATE.apiKey;
+  document.getElementById('model-select').value = STATE.model;
+  document.getElementById('settings-modal').classList.add('show');
+}
+function closeSettings() { document.getElementById('settings-modal').classList.remove('show'); }
+function saveSettings() {
+  STATE.apiKey = document.getElementById('api-key-input').value.trim();
+  STATE.model = document.getElementById('model-select').value;
+  localStorage.setItem('ocs_api_key', STATE.apiKey);
+  localStorage.setItem('ocs_model', STATE.model);
+  updateStatusPill();
+  closeSettings();
+}
+function updateStatusPill() {
+  const pill = document.getElementById('status-pill');
+  if (STATE.apiKey) {
+    pill.textContent = 'READY · ' + (STATE.model.includes('imagen') ? 'IMAGEN 4' : 'NANO BANANA');
+    pill.className = 'status-pill ok';
+  } else {
+    pill.textContent = '需要 API KEY';
+    pill.className = 'status-pill warn';
+  }
+}
+
+function openHistory() {
+  renderHistory();
+  document.getElementById('history-drawer').classList.add('open');
+}
+function closeHistory() { document.getElementById('history-drawer').classList.remove('open'); }
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (STATE.history.length === 0) {
+    list.innerHTML = '<div class="history-empty">尚無紀錄</div>';
+    return;
+  }
+  list.innerHTML = STATE.history.map((h, i) => `
+    <div class="history-item" onclick="restoreHistory(${i})">
+      <img src="${h.thumb || ''}" alt="" />
+      <div class="info">
+        <div class="title">${escapeHtml(h.theme || '無主題')}</div>
+        <div class="meta">${h.count} 張 · ${new Date(h.time).toLocaleString('zh-TW', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function restoreHistory(i) {
+  const h = STATE.history[i];
+  if (!h || !h.results) return;
+  STATE.results = h.results;
+  STATE.mainEmotion = h.mainEmotion || EMOTIONS[0].key;
+  closeHistory();
+  renderResults();
+}
+
+function clearHistory() {
+  if (!confirm('確定清除所有生成紀錄嗎？')) return;
+  STATE.history = [];
+  localStorage.removeItem('ocs_history');
+  renderHistory();
+}
+
+function pushHistory(theme) {
+  const results = STATE.results;
+  const keys = Object.keys(results);
+  if (keys.length === 0) return;
+  const thumb = results[keys[0]].dataUrl;
+  STATE.history.unshift({
+    time: Date.now(),
+    theme,
+    count: keys.length,
+    thumb,
+    mainEmotion: STATE.mainEmotion,
+    results,
+  });
+  STATE.history = STATE.history.slice(0, 20);
+  try {
+    localStorage.setItem('ocs_history', JSON.stringify(STATE.history));
+  } catch (e) {
+    // localStorage 滿了，降級只保留最近 5 筆
+    STATE.history = STATE.history.slice(0, 5);
+    try { localStorage.setItem('ocs_history', JSON.stringify(STATE.history)); }
+    catch { /* 還是滿，放棄 */ }
+  }
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+}
+
+function bindPackagingChecks() {
+  document.querySelectorAll('.pack-opt').forEach(opt => {
+    opt.addEventListener('click', e => {
+      e.preventDefault();
+      const cb = opt.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      opt.classList.toggle('active', cb.checked);
+    });
+  });
+}
+
+function setStatus({ type = 'loading', message, progress } = {}) {
+  const el = document.getElementById('status-area');
+  let html = '<div class="status ' + (type === 'ok' ? 'ok' : type === 'err' ? 'err' : '') + '">';
+  if (type === 'loading') html += '<div class="spinner"></div>';
+  if (type === 'ok') html += '<span style="font-size:18px;line-height:1;">✓</span>';
+  if (type === 'err') html += '<span style="font-size:18px;line-height:1;">✗</span>';
+  html += '<span style="flex:1;">' + escapeHtml(message) + '</span>';
+  if (typeof progress === 'number') {
+    html += '<div class="progress-bar" style="max-width:120px;"><div style="width:' + progress + '%"></div></div>';
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+function clearStatus() { document.getElementById('status-area').innerHTML = ''; }
+
+// =====================================================================
+// ▒▒▒▒▒  Gemini API  ▒▒▒▒▒
+// =====================================================================
+
+// 包裝 fetch，遇到「Failed to fetch」展開真正的原因
+async function safeFetch(url, opts) {
+  try {
+    return await fetch(url, opts);
+  } catch (e) {
+    // TypeError: Failed to fetch 是瀏覽器層級的網路錯誤
+    if (window.location.protocol === 'file:') {
+      throw new Error('網路請求失敗。原因：你直接雙擊 HTML 開啟（file:// 協定）。請改用本機伺服器，例如：\n\n1) 在 HTML 所在資料夾執行 python3 -m http.server 8000\n2) 瀏覽器打開 http://localhost:8000/one-click-sticker.html\n\n或上傳到 Netlify Drop（拖檔即可）。詳情：' + e.message);
+    }
+    throw new Error('網路請求失敗：' + e.message + '。可能原因：(1) 沒有網路 (2) 防火牆/代理擋住 generativelanguage.googleapis.com (3) 瀏覽器擴充套件干擾');
+  }
+}
+
+async function callGeminiImage({ prompt, useReference = true }) {
+  if (!STATE.apiKey) throw new Error('請先設定 API Key（右上角齒輪）');
+  const model = STATE.model;
+
+  if (model.startsWith('imagen')) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${STATE.apiKey}`;
+    const body = { instances: [{ prompt }], parameters: { sampleCount: 1, aspectRatio: '1:1' } };
+    const res = await safeFetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('Imagen API 回 ' + res.status + '：' + parseGoogleError(txt));
+    }
+    const data = await res.json();
+    const b64 = data?.predictions?.[0]?.bytesBase64Encoded;
+    if (!b64) throw new Error('Imagen 回傳格式異常');
+    return 'data:image/png;base64,' + b64;
+  }
+
+  // Nano Banana
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${STATE.apiKey}`;
+  const parts = [];
+  if (useReference && STATE.uploadedImage) {
+    parts.push({ inline_data: { mime_type: STATE.uploadedImage.mimeType, data: STATE.uploadedImage.base64 } });
+  }
+  parts.push({ text: prompt });
+  const body = {
+    contents: [{ role: 'user', parts }],
+    generationConfig: { responseModalities: ['IMAGE'] }
+  };
+  const res = await safeFetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error('Gemini API 回 ' + res.status + '：' + parseGoogleError(txt));
+  }
+  const data = await res.json();
+  const candidateParts = data?.candidates?.[0]?.content?.parts || [];
+  const imgPart = candidateParts.find(p => p.inlineData || p.inline_data);
+  if (!imgPart) {
+    const textPart = candidateParts.find(p => p.text);
+    throw new Error('Gemini 沒回傳圖片' + (textPart ? '：' + textPart.text.slice(0, 100) : ''));
+  }
+  const inline = imgPart.inlineData || imgPart.inline_data;
+  return 'data:' + (inline.mimeType || inline.mime_type) + ';base64,' + inline.data;
+}
+
+function parseGoogleError(txt) {
+  try {
+    const j = JSON.parse(txt);
+    return (j.error?.message || txt).slice(0, 200);
+  } catch {
+    return txt.slice(0, 200);
+  }
+}
+
+async function callGeminiText({ prompt, withImage = false, expectJson = true }) {
+  if (!STATE.apiKey) throw new Error('請先設定 API Key');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${STATE.apiKey}`;
+  const parts = [];
+  if (withImage && STATE.uploadedImage) {
+    parts.push({ inline_data: { mime_type: STATE.uploadedImage.mimeType, data: STATE.uploadedImage.base64 } });
+  }
+  parts.push({ text: prompt });
+  const body = {
+    contents: [{ role: 'user', parts }],
+    generationConfig: expectJson ? { responseMimeType: 'application/json' } : {}
+  };
+  const res = await safeFetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('Gemini text API ' + res.status + ': ' + parseGoogleError(await res.text()));
+  const data = await res.json();
+  return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// =====================================================================
+// ▒▒▒▒▒  Prompt 建構器  ▒▒▒▒▒
+// =====================================================================
+
+function buildStickerPrompt(emotion, themeText) {
+  const animeMode = document.getElementById('toggle-anime').checked;
+  const textMode = STATE.textMode;
+  const styleDirective = animeMode
+    ? `Cute anime/chibi cartoon style with big sparkly eyes, soft kawaii aesthetic, exaggerated cute proportions, thick clean white outline.`
+    : `Stylized illustration based directly on the reference photo's subject, KEEPING the SAME identity, fur pattern, colors, and distinctive features. Cartoon-rendered but instantly recognizable as the same character. Thick clean white outline around the silhouette.`;
+
+  const themePart = themeText ? `Context theme: ${themeText}. ` : '';
+  const subject = STATE.uploadedImage
+    ? `the character/pet/person from the provided reference photo. Maintain identity, fur/hair color, distinctive features.`
+    : `a cute cartoon character`;
+
+  if (textMode === 'ai-zh') {
+    // 中文 AI 直接生成（需要 Nano Banana Pro 等級）
+    return [
+      `Create a single LINE messenger style sticker.`,
+      `Subject: ${subject}.`,
+      `Expression and pose: ${emotion.pose}.`,
+      themePart,
+      styleDirective,
+      `Composition: subject centered with clear empty space above OR around the character for the text caption.`,
+      `Background: solid pure green color #00FF00 (chroma key green), absolutely flat with no patterns. The background must be only #00FF00.`,
+      `IMPORTANT TEXT REQUIREMENT: Add a Traditional Chinese text caption "${emotion.zh}" prominently displayed near the character (above, beside, or in a speech bubble). The text MUST be in Traditional Chinese (繁體中文), large, bold, easy to read, with a creative typography style that fits a sticker aesthetic. The exact text to display is: ${emotion.zh}`,
+    ].filter(Boolean).join(' ');
+  }
+
+  // 英文後製 / 純角色：禁止 AI 加任何文字
+  return [
+    `Create a single LINE messenger style sticker.`,
+    `Subject: ${subject}.`,
+    `Expression and pose: ${emotion.pose}.`,
+    themePart,
+    styleDirective,
+    `Composition: subject centered, full body or upper body visible, sticker-style.`,
+    `Background: solid pure green color #00FF00 (chroma key green), absolutely flat with no patterns, no textures, no gradients, no other elements. The background must be only #00FF00.`,
+    `CRITICAL — DO NOT include ANY of the following in the image: text, letters, words, Chinese characters, Japanese characters, English text, numbers, captions, speech bubbles, signatures, watermarks. The image must contain ONLY the character on a green background. Absolutely no text whatsoever.`
+  ].filter(Boolean).join(' ');
+}
+
+function buildCollagePrompt(emotionList, themeText) {
+  const animeMode = document.getElementById('toggle-anime').checked;
+  const textMode = STATE.textMode;
+  const styleDirective = animeMode
+    ? `Cute chibi anime cartoon style, kawaii.`
+    : `Stylized cartoon based on reference photo, keeping subject identity consistent across all stickers.`;
+  const themePart = themeText ? ` Theme context: ${themeText}.` : '';
+
+  if (textMode === 'ai-zh') {
+    const cells = emotionList.map((e, i) => `(${i+1}) ${e.pose}, with Traditional Chinese caption "${e.zh}"`).join('; ');
+    return [
+      `Create a single image containing a 4×3 grid (4 columns, 3 rows = 12 cells) of LINE messenger stickers featuring the SAME character throughout.`,
+      STATE.uploadedImage ? `Subject in every cell: the character from the provided reference photo, MAINTAIN consistent identity across all 12 cells.` : '',
+      `Each cell contains a different expression with a Traditional Chinese (繁體中文) caption: ${cells}.`,
+      styleDirective,
+      themePart,
+      `Each sticker has thick white outline, sits on solid pure green #00FF00 background.`,
+      `The whole image background is also solid #00FF00.`,
+      `IMPORTANT: Use ONLY Traditional Chinese (繁體中文) for all text. Each caption must be the exact text specified above. Make text large, bold, with creative sticker-style typography.`,
+    ].filter(Boolean).join(' ');
+  }
+
+  const cells = emotionList.map((e, i) => `(${i+1}) ${e.pose}`).join('; ');
+  return [
+    `Create a single image containing a 4×3 grid (4 columns, 3 rows = 12 cells) of LINE messenger stickers featuring the SAME character throughout.`,
+    STATE.uploadedImage ? `Subject in every cell: the character from the provided reference photo, MAINTAIN consistent identity across all 12 cells.` : '',
+    `Each cell contains a different expression/pose: ${cells}.`,
+    styleDirective,
+    themePart,
+    `Each sticker has thick white outline, sits on solid pure green #00FF00 background.`,
+    `The whole image background is also solid #00FF00.`,
+    `CRITICAL: Absolutely NO text, letters, numbers, words, characters, captions, speech bubbles or any typography in any cell. Only the characters on green background.`
+  ].filter(Boolean).join(' ');
+}
+
+// =====================================================================
+// ▒▒▒▒▒  Canvas: 去背 + 文字 + 後製  ▒▒▒▒▒
+// =====================================================================
+
+function dataUrlToImage(dataUrl) {
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => rej(new Error('圖片載入失敗'));
+    img.src = dataUrl;
+  });
+}
+
+// Chroma key 去背：去掉綠色背景，邊緣羽化處理綠色溢出
+function chromaKeyRemove(canvas, ctx) {
+  const W = canvas.width, H = canvas.height;
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i+1], b = d[i+2];
+    if (g > 100 && g > r * 1.25 && g > b * 1.25) {
+      const greenness = (g - Math.max(r, b)) / 255;
+      d[i+3] = Math.max(0, 255 - greenness * 700);
+      // 邊緣抑制綠色溢出
+      if (d[i+3] > 0 && d[i+3] < 255) {
+        d[i+1] = Math.min(g, Math.max(r, b) + 10);
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+// 渲染主貼圖（含或不含背景，可選文字）
+async function renderSticker({ rawDataUrl, emotion, removeBackground, addText, size = 512 }) {
+  const img = await dataUrlToImage(rawDataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  // 縮放並置中
+  const ratio = Math.min(size / img.width, size / img.height);
+  const nw = img.width * ratio;
+  const nh = img.height * ratio;
+  const ox = (size - nw) / 2;
+  const oy = (size - nh) / 2;
+  ctx.drawImage(img, ox, oy, nw, nh);
+
+  if (removeBackground) {
+    chromaKeyRemove(canvas, ctx);
+  }
+
+  if (addText && emotion && emotion.en) {
+    drawStickerText(ctx, emotion.en, emotion.color, size);
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
+// 在貼圖上方畫英文文字（影片風格 SO SAD / LOL / GRRR / UWU）
+function drawStickerText(ctx, text, color, size) {
+  const fontSize = Math.round(size * 0.13);
+  const x = size / 2;
+  const y = Math.round(size * 0.18);
+
+  ctx.font = `900 ${fontSize}px "Inter", "Arial Black", sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // 黑色描邊
+  ctx.lineWidth = Math.max(4, fontSize * 0.12);
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineJoin = 'round';
+  ctx.miterLimit = 2;
+  ctx.strokeText(text, x, y);
+
+  // 白色內描邊
+  ctx.lineWidth = Math.max(2, fontSize * 0.06);
+  ctx.strokeStyle = '#ffffff';
+  ctx.strokeText(text, x, y);
+
+  // 主色填色
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+}
+
+// 切割拼貼大圖
+async function sliceCollage(rawDataUrl, emotionList) {
+  const img = await dataUrlToImage(rawDataUrl);
+  const cols = 4, rows = 3;
+  const cellW = img.width / cols;
+  const cellH = img.height / rows;
+  const slices = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const idx = r * cols + c;
+      if (idx >= emotionList.length) break;
+      const canvas = document.createElement('canvas');
+      canvas.width = cellW;
+      canvas.height = cellH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, c * cellW, r * cellH, cellW, cellH, 0, 0, cellW, cellH);
+      slices.push({ emotion: emotionList[idx], dataUrl: canvas.toDataURL('image/png') });
+    }
+  }
+  return slices;
+}
+
+// =====================================================================
+// ▒▒▒▒▒  生成主流程  ▒▒▒▒▒
+// =====================================================================
+
+async function generateSelected() {
+  if (STATE.selectedEmotions.size === 0) {
+    alert('請先選擇至少一個表情');
+    return;
+  }
+  if (!STATE.apiKey) {
+    openSettings();
+    return;
+  }
+
+  const themeText = document.getElementById('theme-input').value.trim();
+  const addOverlayText = STATE.textMode === 'overlay-en';  // 只有英文後製模式才疊加
+  const selectedEmotions = EMOTIONS.filter(e => STATE.selectedEmotions.has(e.key));
+
+  const btn = document.getElementById('generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div><span>生成中…</span>';
+
+  // 顯示 results section + 預先建立佔位卡片
+  STATE.results = {};
+  STATE.mainEmotion = selectedEmotions[0].key;
+  document.getElementById('results-section').classList.remove('hidden');
+  renderResults();
+
+  const total = selectedEmotions.length;
+  let done = 0, failed = 0;
+  const errors = [];
+
+  if (STATE.genMode === 'collage' && selectedEmotions.length >= 6) {
+    // 拼貼模式：一次生成大圖再切割
+    setStatus({ type: 'loading', message: '生成 4×3 拼貼大圖中（單次 API 呼叫）…' });
+    try {
+      // 拼貼模式需要 12 個位置，不足補充
+      const padded = [...selectedEmotions];
+      while (padded.length < 12) padded.push(selectedEmotions[padded.length % selectedEmotions.length]);
+
+      const prompt = buildCollagePrompt(padded.slice(0, 12), themeText);
+      const rawDataUrl = await callGeminiImage({ prompt });
+      const slices = await sliceCollage(rawDataUrl, padded.slice(0, 12));
+
+      for (const s of slices) {
+        if (!STATE.selectedEmotions.has(s.emotion.key) || STATE.results[s.emotion.key]) continue;
+        const finalUrl = await renderSticker({
+          rawDataUrl: s.dataUrl,
+          emotion: s.emotion,
+          removeBackground: true,
+          addText: addOverlayText,
+        });
+        STATE.results[s.emotion.key] = { dataUrl: finalUrl, dataUrlWithBg: s.dataUrl, emotion: s.emotion };
+        done++;
+      }
+      renderResults();
+    } catch (e) {
+      failed = total;
+      errors.push(e.message);
+    }
+  } else {
+    // 個別生成（並發 3）
+    const queue = [...selectedEmotions];
+    const CONC = 3;
+
+    async function worker() {
+      while (queue.length) {
+        const emotion = queue.shift();
+        try {
+          const prompt = buildStickerPrompt(emotion, themeText);
+          const rawDataUrl = await callGeminiImage({ prompt });
+          const finalUrl = await renderSticker({
+            rawDataUrl,
+            emotion,
+            removeBackground: true,
+            addText: addOverlayText,
+          });
+          STATE.results[emotion.key] = { dataUrl: finalUrl, dataUrlWithBg: rawDataUrl, emotion };
+          done++;
+        } catch (e) {
+          failed++;
+          errors.push(`${emotion.key}: ${e.message}`);
+          STATE.results[emotion.key] = { error: e.message, emotion };
+        }
+        renderResults();
+        setStatus({
+          type: 'loading',
+          message: `生成中 ${done + failed}/${total}（成功 ${done}・失敗 ${failed}）`,
+          progress: Math.round((done + failed) / total * 100),
+        });
+      }
+    }
+
+    await Promise.all(Array.from({ length: Math.min(CONC, total) }, worker));
+  }
+
+  // 完成狀態
+  if (failed === 0) {
+    setStatus({ type: 'ok', message: `全部 ${done} 張完成！可下載或一鍵打包。` });
+  } else if (done > 0) {
+    setStatus({ type: 'err', message: `完成 ${done} 張，失敗 ${failed} 張。失敗的可單獨重試。` });
+  } else {
+    setStatus({ type: 'err', message: '全部失敗：' + (errors[0] || '未知錯誤') });
+  }
+
+  pushHistory(themeText);
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 16.8 5.8 21.3l2.4-7.4L2 9.4h7.6z"/></svg><span>重新生成</span>';
+}
+
+async function retryOne(key) {
+  const emotion = EMOTIONS.find(e => e.key === key);
+  if (!emotion) return;
+  const themeText = document.getElementById('theme-input').value.trim();
+  const addOverlayText = STATE.textMode === 'overlay-en';
+  STATE.results[key] = { loading: true, emotion };
+  renderResults();
+  try {
+    const prompt = buildStickerPrompt(emotion, themeText);
+    const rawDataUrl = await callGeminiImage({ prompt });
+    const finalUrl = await renderSticker({ rawDataUrl, emotion, removeBackground: true, addText: addOverlayText });
+    STATE.results[key] = { dataUrl: finalUrl, dataUrlWithBg: rawDataUrl, emotion };
+  } catch (e) {
+    STATE.results[key] = { error: e.message, emotion };
+  }
+  renderResults();
+}
+
+function setMainSticker(key) {
+  STATE.mainEmotion = key;
+  renderResults();
+  document.getElementById('main-source-info').textContent = `「${key}」貼圖（會自動裁成 240×240）`;
+}
+
+// =====================================================================
+// ▒▒▒▒▒  渲染結果 / 預覽  ▒▒▒▒▒
+// =====================================================================
+
+function renderResults() {
+  const grid = document.getElementById('results-grid');
+  const animOn = document.getElementById('toggle-anim').checked;
+  const keys = Array.from(STATE.selectedEmotions);
+
+  grid.innerHTML = keys.map((key, idx) => {
+    const r = STATE.results[key] || {};
+    const emotion = EMOTIONS.find(e => e.key === key);
+    const isMain = STATE.mainEmotion === key;
+    const num = String(idx + 1).padStart(2, '0');
+
+    let imgPart;
+    if (r.error) {
+      imgPart = `<div class="sticker-img-wrap error" onclick="retryOne('${key}')">
+        <span>生成失敗</span>
+        <button class="btn" style="padding:4px 10px;font-size:11px;">點此重試</button>
+      </div>`;
+    } else if (r.loading || (!r.dataUrl && !r.error)) {
+      imgPart = `<div class="sticker-img-wrap loading"><div class="spinner"></div></div>`;
+    } else if (r.dataUrl) {
+      imgPart = `<div class="sticker-img-wrap" onclick="openPreview('${key}')">
+        <span class="sticker-num">${num}</span>
+        <img src="${r.dataUrl}" alt="${escapeHtml(key)}" />
+      </div>`;
+    } else {
+      imgPart = `<div class="sticker-img-wrap empty"><span class="placeholder">等待中</span></div>`;
+    }
+
+    return `
+      <div class="sticker-card ${animOn ? 'animate' : ''} ${isMain ? 'is-main' : ''}">
+        ${imgPart}
+        <div class="sticker-meta">
+          <span class="label">${escapeHtml(key)}</span>
+          <div class="actions">
+            ${r.dataUrl ? `<button onclick="setMainSticker('${key}')" title="設為主圖" class="set-main">
+              <svg viewBox="0 0 24 24" fill="${isMain ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </button>` : ''}
+            ${r.dataUrl ? `<button onclick="downloadOne('${key}')" title="下載">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>` : ''}
+            <button onclick="retryOne('${key}')" title="重新生成">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openPreview(key) {
+  const r = STATE.results[key];
+  if (!r || !r.dataUrl) return;
+  STATE.preview = { dataUrl: r.dataUrlWithBg || r.dataUrl, dataUrlNoBg: r.dataUrl, emotion: EMOTIONS.find(e=>e.key===key), showBg: false };
+  document.getElementById('preview-img').src = r.dataUrl;
+  document.getElementById('preview-bg-toggle').checked = false;
+  document.getElementById('preview-img-wrap').classList.add('transparent');
+  document.getElementById('preview-modal').classList.add('show');
+}
+function closePreview() { document.getElementById('preview-modal').classList.remove('show'); }
+function togglePreviewBg() {
+  const cb = document.getElementById('preview-bg-toggle');
+  // cb checked = 顯示透明背景；未勾 = 顯示綠底
+  STATE.preview.showBg = !cb.checked;
+  document.getElementById('preview-img').src = STATE.preview.showBg ? STATE.preview.dataUrl : STATE.preview.dataUrlNoBg;
+  document.getElementById('preview-img-wrap').classList.toggle('transparent', cb.checked);
+}
+function downloadCurrentPreview() {
+  const url = STATE.preview.showBg ? STATE.preview.dataUrl : STATE.preview.dataUrlNoBg;
+  downloadDataUrl(url, `sticker-${STATE.preview.emotion.key}.png`);
+}
+
+async function downloadOne(key) {
+  const r = STATE.results[key];
+  if (!r || !r.dataUrl) return;
+  const idx = Array.from(STATE.selectedEmotions).indexOf(key) + 1;
+  // 轉成 LINE 規格 370×320
+  const linePng = await smartResize(r.dataUrl, 370, 320);
+  downloadDataUrl(linePng, `sticker-${String(idx).padStart(2,'0')}-${key}.png`);
+}
+
+function downloadDataUrl(url, filename) {
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// =====================================================================
+// ▒▒▒▒▒  AI 從圖片取得靈感  ▒▒▒▒▒
+// =====================================================================
+
+async function generateIdeasFromImage() {
+  if (!STATE.uploadedImage) {
+    alert('請先上傳照片');
+    return;
+  }
+  if (!STATE.apiKey) { openSettings(); return; }
+
+  const btn = document.getElementById('ai-inspire-btn');
+  const oldHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div><span>分析中...</span>';
+
+  try {
+    const prompt = `分析這張照片，找出主角是什麼（人/寵物/物品），並用一句話描述其外觀特徵和氣質個性，作為 LINE 貼圖的主題敘述。請直接輸出主題描述，繁體中文，30 字以內，不要加任何前綴或解釋。回傳純 JSON：{"theme":"..."}`;
+    const result = await callGeminiText({ prompt, withImage: true, expectJson: true });
+    const parsed = JSON.parse(result);
+    if (parsed.theme) {
+      document.getElementById('theme-input').value = parsed.theme;
+    }
+  } catch (e) {
+    alert('AI 分析失敗：' + e.message);
+  }
+  btn.disabled = false;
+  btn.innerHTML = oldHtml;
+}
+
+// =====================================================================
+// ▒▒▒▒▒  拼貼大圖下載  ▒▒▒▒▒
+// =====================================================================
+
+async function downloadGridImage() {
+  const okResults = Array.from(STATE.selectedEmotions)
+    .map(k => STATE.results[k])
+    .filter(r => r && r.dataUrl);
+  if (okResults.length === 0) {
+    alert('沒有可下載的貼圖');
+    return;
+  }
+
+  const cols = 4;
+  const rows = Math.ceil(okResults.length / cols);
+  const cellSize = 370;
+  const W = cols * cellSize;
+  const H = rows * cellSize;
+  const canvas = document.createElement('canvas');
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#A8E063';
+  ctx.fillRect(0, 0, W, H);
+
+  for (let i = 0; i < okResults.length; i++) {
+    const img = await dataUrlToImage(okResults[i].dataUrlWithBg || okResults[i].dataUrl);
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    ctx.drawImage(img, c * cellSize, r * cellSize, cellSize, cellSize);
+  }
+  downloadDataUrl(canvas.toDataURL('image/png'), `sticker-collage-${Date.now()}.png`);
+}
+
+// =====================================================================
+// ▒▒▒▒▒  一鍵上架包  ▒▒▒▒▒
+// =====================================================================
+
+function openPackagingModal() {
+  const okCount = Object.values(STATE.results).filter(r => r && r.dataUrl).length;
+  if (okCount === 0) {
+    alert('沒有完成的貼圖可打包');
+    return;
+  }
+  if (!STATE.mainEmotion || !STATE.results[STATE.mainEmotion] || !STATE.results[STATE.mainEmotion].dataUrl) {
+    // 自動指定第一張完成的當主圖
+    const firstOk = Array.from(STATE.selectedEmotions).find(k => STATE.results[k] && STATE.results[k].dataUrl);
+    if (firstOk) STATE.mainEmotion = firstOk;
+  }
+  document.getElementById('main-source-info').textContent = `「${STATE.mainEmotion}」貼圖（會自動裁成 240×240）`;
+  document.getElementById('packaging-modal').classList.add('show');
+}
+function closePackagingModal() { document.getElementById('packaging-modal').classList.remove('show'); }
+
+async function downloadPackage() {
+  const checks = {};
+  document.querySelectorAll('.pack-opt').forEach(opt => {
+    checks[opt.dataset.pack] = opt.classList.contains('active');
+  });
+
+  const okEntries = Array.from(STATE.selectedEmotions)
+    .map((k, i) => ({ key: k, idx: i+1, result: STATE.results[k] }))
+    .filter(e => e.result && e.result.dataUrl);
+
+  if (okEntries.length === 0) {
+    alert('沒有完成的貼圖');
+    return;
+  }
+
+  closePackagingModal();
+  setStatus({ type: 'loading', message: '正在打包 ZIP…' });
+
+  const files = [];
+
+  // 1. 貼圖（去背 PNG）
+  if (checks['stickers-noBg']) {
+    for (const e of okEntries) {
+      const resized = await smartResize(e.result.dataUrl, 370, 320);
+      files.push({
+        name: `stickers/${String(e.idx).padStart(2,'0')}.png`,
+        bytes: dataUrlToBytes(resized)
+      });
+    }
+  }
+
+  // 2. 貼圖（含綠底）
+  if (checks['stickers-withBg']) {
+    for (const e of okEntries) {
+      const src = e.result.dataUrlWithBg || e.result.dataUrl;
+      const resized = await smartResize(src, 370, 320);
+      files.push({
+        name: `stickers-with-bg/${String(e.idx).padStart(2,'0')}.png`,
+        bytes: dataUrlToBytes(resized)
+      });
+    }
+  }
+
+  // 3. 主圖 main.png (240x240)
+  if (checks['main']) {
+    const mainResult = STATE.results[STATE.mainEmotion] || okEntries[0].result;
+    const mainPng = await resizeImage(mainResult.dataUrl, 240, 240);
+    files.push({ name: 'main.png', bytes: dataUrlToBytes(mainPng) });
+  }
+
+  // 4. tab.png (96x74)
+  if (checks['tab']) {
+    const mainResult = STATE.results[STATE.mainEmotion] || okEntries[0].result;
+    const tabPng = await resizeImage(mainResult.dataUrl, 96, 74);
+    files.push({ name: 'tab.png', bytes: dataUrlToBytes(tabPng) });
+  }
+
+  // 5. 拼貼大圖
+  if (checks['grid']) {
+    const cols = 4;
+    const rows = Math.ceil(okEntries.length / cols);
+    const cellSize = 370;
+    const canvas = document.createElement('canvas');
+    canvas.width = cols * cellSize;
+    canvas.height = rows * cellSize;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#A8E063';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < okEntries.length; i++) {
+      const img = await dataUrlToImage(okEntries[i].result.dataUrlWithBg || okEntries[i].result.dataUrl);
+      const r = Math.floor(i / cols);
+      const c = i % cols;
+      ctx.drawImage(img, c * cellSize, r * cellSize, cellSize, cellSize);
+    }
+    files.push({ name: 'collage-preview.png', bytes: dataUrlToBytes(canvas.toDataURL('image/png')) });
+  }
+
+  // 6. README
+  const readme = `# LINE 貼圖上架包
+
+由 One Click Sticker v3 生成於 ${new Date().toLocaleString('zh-TW')}
+
+## 內容
+${files.map(f => '- ' + f.name).join('\n')}
+
+## LINE 上架步驟
+1. 到 LINE Creators Market: https://creator.line.me/zh-Hant/
+2. 註冊或登入帳號
+3. 建立新貼圖 → 選擇貼圖
+4. 上傳 main.png 作為主圖
+5. 上傳 tab.png 作為標籤圖
+6. 上傳 stickers/ 內的所有 PNG 作為貼圖（依編號順序）
+7. 填寫貼圖名稱、說明、標題
+8. 送出審查（通常 1-2 週）
+
+## 規格參考
+- 主圖 main.png: 240×240 px
+- 標籤圖 tab.png: 96×74 px
+- 貼圖: 370×320 px (W×H)，至少 8 張、最多 40 張
+- 全部都是 PNG 格式，建議透明背景
+`;
+  files.push({
+    name: 'README.txt',
+    bytes: new TextEncoder().encode(readme)
+  });
+
+  const zipBytes = buildZip(files);
+  const blob = new Blob([zipBytes], { type: 'application/zip' });
+  const url = URL.createObjectURL(blob);
+  downloadDataUrl(url, `line-sticker-pack-${Date.now()}.zip`);
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+  setStatus({ type: 'ok', message: `打包完成！共 ${files.length} 個檔案。` });
+}
+
+async function resizeImage(dataUrl, targetW, targetH, anchor = 'center') {
+  const img = await dataUrlToImage(dataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext('2d');
+  // 用 cover 邏輯（保持比例填滿）
+  const ratio = Math.max(targetW / img.width, targetH / img.height);
+  const nw = img.width * ratio;
+  const nh = img.height * ratio;
+  let ox = (targetW - nw) / 2;
+  let oy;
+  if (anchor === 'top') oy = 0;
+  else if (anchor === 'bottom') oy = targetH - nh;
+  else oy = (targetH - nh) / 2;
+  ctx.drawImage(img, ox, oy, nw, nh);
+  return canvas.toDataURL('image/png');
+}
+
+// 智慧裁切：分析圖片中央密度高的區域決定 anchor
+async function smartResize(dataUrl, targetW, targetH) {
+  const img = await dataUrlToImage(dataUrl);
+  // 簡單啟發式：大部分貼圖角色會在中央或偏下，預設 center
+  // 若圖比目標寬比更寬（如 16:9 vs 3:2），裁掉左右
+  // 若圖比目標寬比更窄（如 1:1 vs 3:2），裁掉上下，預設保留上方（角色頭部）
+  const srcRatio = img.width / img.height;
+  const targetRatio = targetW / targetH;
+  let anchor = 'center';
+  if (srcRatio < targetRatio) {
+    // 來源較高瘦，裁上下，預設保留上方（角色臉/頭多在上半部）
+    anchor = 'top';
+  }
+  return resizeImage(dataUrl, targetW, targetH, anchor);
+}
+
+// =====================================================================
+// ▒▒▒▒▒  ZIP 打包（純 JS，無外部 lib）  ▒▒▒▒▒
+// =====================================================================
+
+function dataUrlToBytes(dataUrl) {
+  const base64 = dataUrl.split(',')[1];
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c;
+  }
+  return t;
+})();
+function crc32(bytes) {
+  let c = 0xffffffff;
+  for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+function buildZip(files) {
+  const encoder = new TextEncoder();
+  const chunks = [];
+  const centralDir = [];
+  let offset = 0;
+
+  for (const f of files) {
+    const nameBytes = encoder.encode(f.name);
+    const crc = crc32(f.bytes);
+    const size = f.bytes.length;
+
+    const localHeader = new Uint8Array(30 + nameBytes.length);
+    const dv = new DataView(localHeader.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true);
+    dv.setUint16(6, 0x0800, true);
+    dv.setUint16(8, 0, true);
+    dv.setUint16(10, 0, true);
+    dv.setUint16(12, 0, true);
+    dv.setUint32(14, crc, true);
+    dv.setUint32(18, size, true);
+    dv.setUint32(22, size, true);
+    dv.setUint16(26, nameBytes.length, true);
+    dv.setUint16(28, 0, true);
+    localHeader.set(nameBytes, 30);
+    chunks.push(localHeader);
+    chunks.push(f.bytes);
+
+    const centralEntry = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(centralEntry.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true);
+    cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0x0800, true);
+    cv.setUint16(10, 0, true);
+    cv.setUint16(12, 0, true);
+    cv.setUint16(14, 0, true);
+    cv.setUint32(16, crc, true);
+    cv.setUint32(20, size, true);
+    cv.setUint32(24, size, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint16(30, 0, true);
+    cv.setUint16(32, 0, true);
+    cv.setUint16(34, 0, true);
+    cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true);
+    cv.setUint32(42, offset, true);
+    centralEntry.set(nameBytes, 46);
+    centralDir.push(centralEntry);
+
+    offset += localHeader.length + f.bytes.length;
+  }
+
+  const centralStart = offset;
+  let centralSize = 0;
+  for (const c of centralDir) { chunks.push(c); centralSize += c.length; }
+
+  const end = new Uint8Array(22);
+  const ev = new DataView(end.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(4, 0, true);
+  ev.setUint16(6, 0, true);
+  ev.setUint16(8, files.length, true);
+  ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true);
+  ev.setUint32(16, centralStart, true);
+  ev.setUint16(20, 0, true);
+  chunks.push(end);
+
+  const total = chunks.reduce((a, c) => a + c.length, 0);
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const c of chunks) { out.set(c, p); p += c.length; }
+  return out;
+}
+</script>
+</body>
+</html>
