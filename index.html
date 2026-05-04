@@ -269,18 +269,77 @@
   @media (max-width: 900px) {
     .hero h1 { font-size: 36px; }
     .hero h1 .v3 { font-size: 22px; }
-    .topbar { padding: 16px 20px; }
-    .panel { padding: 24px; border-radius: 16px; }
+    .topbar { padding: 14px 16px; flex-wrap: wrap; gap: 8px; }
+    .topbar-row .icon-btn span { display: none; }
+    .panel { padding: 20px 18px; border-radius: 16px; }
     .panel-grid { grid-template-columns: 1fr; gap: 28px; }
     .results-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
     .history-drawer { width: 100%; right: -100%; }
     .toggles { gap: 14px; padding: 14px; }
     .pack-options { grid-template-columns: 1fr; }
+    .upload-zone { aspect-ratio: 16/10; max-height: 280px; }
+
+    /* 手機表情格子：3 欄但每格更高更好點 */
+    .emotion-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .emotion-btn { padding: 18px 6px; font-size: 15px; }
+
+    /* 手機主 CTA 黏底 */
+    .cta-row { position: sticky; bottom: 12px; z-index: 30; }
+    .cta-row .btn.primary.large {
+      box-shadow: 0 8px 24px rgba(196, 255, 61, 0.35), 0 0 0 1px var(--accent);
+      padding: 18px 28px;
+      font-size: 17px;
+    }
+
+    /* 手機 chip 變大 */
+    .theme-chip { padding: 8px 14px; font-size: 13px; }
+    .seg-control button { padding: 10px 8px; font-size: 13px; }
+
+    /* 手機文字模式 segmented 改直立 */
+    .seg-control { flex-wrap: wrap; }
+
+    /* 結果區操作按鈕排好 */
+    .results-header { flex-direction: column; align-items: flex-start; }
+    .results-actions { width: 100%; }
+    .results-actions .btn { flex: 1; }
+
+    /* 手機貼圖卡片 hover 改成 active 觸發 */
+    .sticker-card.animate:active .sticker-img-wrap img {
+      animation: bounce 0.6s ease infinite;
+    }
+
+    /* topbar pill 縮短 */
+    .status-pill { font-size: 10px; padding: 5px 9px; }
   }
   @media (max-width: 480px) {
-    .hero { padding: 32px 16px 8px; }
-    .main { padding: 0 16px; margin-top: 24px; }
-    .results-grid { grid-template-columns: repeat(2, 1fr); }
+    .hero { padding: 28px 16px 6px; }
+    .hero h1 { font-size: 32px; }
+    .hero-sub { font-size: 14px; }
+    .main { padding: 0 12px; margin-top: 20px; }
+    .results-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .results-section { margin-top: 32px; }
+    .panel { padding: 18px 14px; }
+    .step-title { font-size: 17px; margin-bottom: 14px; }
+    .modal { padding: 22px 18px; }
+    .modal h2 { font-size: 20px; }
+    .toggle-label { font-size: 13px; }
+    .upload-zone { aspect-ratio: 16/10; max-height: 200px; }
+    .upload-text { font-size: 13px; }
+    .upload-text b { font-size: 14px; }
+
+    /* 表情按鈕 4 欄擠不下，改成 3 欄但更高 */
+    .emotion-btn { padding: 16px 4px; font-size: 14px; }
+
+    /* 開關緊湊 */
+    .toggles { gap: 12px; padding: 12px; }
+    .toggle-track { width: 32px; height: 18px; }
+    .toggle-track::after { width: 12px; height: 12px; }
+    .toggle input:checked + .toggle-track::after { transform: translateX(14px); }
+
+    /* 手機 packaging modal 也好看 */
+    .pack-opt { padding: 10px; }
+    .pack-opt-text b { font-size: 13px; }
+    .pack-opt-text span { font-size: 10px; }
   }
 </style>
 </head>
@@ -474,16 +533,31 @@
     <p>這個工具由你的 Google Gemini API 驅動。Key 只儲存在這個瀏覽器的 localStorage，不會傳送至任何第三方。</p>
     <p>還沒有 Key？到 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a> 免費申請。</p>
 
-    <label>Gemini API Key</label>
-    <input type="password" id="api-key-input" class="field" placeholder="AIza..." />
-    <div class="hint">分享 HTML 給別人時不會帶著 Key。每個人需要自己的 Key。</div>
+    <label>影像生成提供者</label>
+    <div class="seg-control" id="provider-control" style="margin-bottom: 4px;">
+      <button class="active" data-provider="gemini" onclick="setProvider('gemini')">Google Gemini</button>
+      <button data-provider="openai" onclick="setProvider('openai')">OpenAI</button>
+    </div>
+    <div class="hint">兩家輪流用可分散 quota 限制。各自用各自的 API Key，即時切換。</div>
 
-    <label>影像模型</label>
-    <select id="model-select" class="field">
-      <option value="gemini-2.5-flash-image">Nano Banana · gemini-2.5-flash-image（推薦）</option>
-      <option value="imagen-4.0-generate-001">Imagen 4 · imagen-4.0-generate-001</option>
-    </select>
-    <div class="hint">Nano Banana 支援上傳照片參考、保持角色一致性。Imagen 4 純文生圖、畫質精緻但無法參考照片。</div>
+    <div id="gemini-config">
+      <label>Gemini API Key</label>
+      <input type="password" id="api-key-input" class="field" placeholder="AIza..." />
+      <div class="hint">免費版每天 500 張、每分鐘 ~10 張。<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">免費申請 Gemini Key</a></div>
+
+      <label>Gemini 影像模型</label>
+      <select id="model-select" class="field">
+        <option value="gemini-2.5-flash-image">Nano Banana · gemini-2.5-flash-image（推薦）</option>
+        <option value="imagen-4.0-generate-001">Imagen 4 · imagen-4.0-generate-001</option>
+      </select>
+      <div class="hint">Nano Banana 支援上傳照片參考。Imagen 4 純文生圖、無法參考照片。</div>
+    </div>
+
+    <div id="openai-config" class="hidden">
+      <label>OpenAI API Key</label>
+      <input type="password" id="openai-key-input" class="field" placeholder="sk-..." />
+      <div class="hint">使用 gpt-image-1 模型，每張 ~$0.02 美金，需綁信用卡。<a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">取得 OpenAI Key</a></div>
+    </div>
 
     <div class="modal-actions">
       <button class="btn" style="flex:1;" onclick="closeSettings()">取消</button>
@@ -594,6 +668,8 @@ const EMOTIONS = [
 
 const STATE = {
   apiKey: localStorage.getItem('ocs_api_key') || '',
+  openaiKey: localStorage.getItem('ocs_openai_key') || '',
+  provider: localStorage.getItem('ocs_provider') || 'gemini',  // gemini / openai
   model: localStorage.getItem('ocs_model') || 'gemini-2.5-flash-image',
   uploadedImage: null,
   selectedEmotions: new Set(),
@@ -602,7 +678,7 @@ const STATE = {
   history: JSON.parse(localStorage.getItem('ocs_history') || '[]'),
   preview: { dataUrl: null, dataUrlNoBg: null, emotion: null, showBg: true },
   genMode: 'individual',
-  textMode: 'overlay-en',  // overlay-en / ai-zh / none
+  textMode: 'overlay-en',
 };
 
 // =====================================================================
@@ -720,22 +796,43 @@ function fileToDataUrl(file) {
 
 function openSettings() {
   document.getElementById('api-key-input').value = STATE.apiKey;
+  document.getElementById('openai-key-input').value = STATE.openaiKey;
   document.getElementById('model-select').value = STATE.model;
+  setProvider(STATE.provider);
   document.getElementById('settings-modal').classList.add('show');
 }
 function closeSettings() { document.getElementById('settings-modal').classList.remove('show'); }
 function saveSettings() {
   STATE.apiKey = document.getElementById('api-key-input').value.trim();
+  STATE.openaiKey = document.getElementById('openai-key-input').value.trim();
   STATE.model = document.getElementById('model-select').value;
   localStorage.setItem('ocs_api_key', STATE.apiKey);
+  localStorage.setItem('ocs_openai_key', STATE.openaiKey);
   localStorage.setItem('ocs_model', STATE.model);
+  localStorage.setItem('ocs_provider', STATE.provider);
   updateStatusPill();
   closeSettings();
 }
+
+function setProvider(provider) {
+  STATE.provider = provider;
+  document.querySelectorAll('#provider-control button').forEach(b => {
+    b.classList.toggle('active', b.dataset.provider === provider);
+  });
+  document.getElementById('gemini-config').classList.toggle('hidden', provider !== 'gemini');
+  document.getElementById('openai-config').classList.toggle('hidden', provider !== 'openai');
+}
+
 function updateStatusPill() {
   const pill = document.getElementById('status-pill');
-  if (STATE.apiKey) {
-    pill.textContent = 'READY · ' + (STATE.model.includes('imagen') ? 'IMAGEN 4' : 'NANO BANANA');
+  const hasGeminiKey = !!STATE.apiKey;
+  const hasOpenAIKey = !!STATE.openaiKey;
+  const currentKeyOk = STATE.provider === 'gemini' ? hasGeminiKey : hasOpenAIKey;
+
+  if (currentKeyOk) {
+    const label = STATE.provider === 'openai' ? 'OPENAI · GPT-IMAGE' :
+                  (STATE.model.includes('imagen') ? 'GEMINI · IMAGEN 4' : 'GEMINI · NANO BANANA');
+    pill.textContent = label;
     pill.className = 'status-pill ok';
   } else {
     pill.textContent = '需要 API KEY';
@@ -851,6 +948,81 @@ async function safeFetch(url, opts) {
     }
     throw new Error('網路請求失敗：' + e.message + '。可能原因：(1) 沒有網路 (2) 防火牆/代理擋住 generativelanguage.googleapis.com (3) 瀏覽器擴充套件干擾');
   }
+}
+
+// 統一影像 API 入口，依 provider 路由
+async function callImageAPI({ prompt, useReference = true }) {
+  if (STATE.provider === 'openai') {
+    return await callOpenAIImage({ prompt, useReference });
+  }
+  return await callGeminiImage({ prompt, useReference });
+}
+
+async function callOpenAIImage({ prompt, useReference = true }) {
+  if (!STATE.openaiKey) throw new Error('請先在設定中填寫 OpenAI API Key');
+
+  // OpenAI gpt-image-1：支援 image edit（含參考圖）和 generation（純文字）
+  const hasImage = useReference && STATE.uploadedImage;
+
+  if (hasImage) {
+    // 用 /v1/images/edits 端點傳遞參考圖
+    const formData = new FormData();
+    // 把 base64 轉成 Blob
+    const blob = await dataUrlToBlob(STATE.uploadedImage.dataUrl);
+    formData.append('image', blob, 'reference.png');
+    formData.append('model', 'gpt-image-1');
+    formData.append('prompt', prompt);
+    formData.append('size', '1024x1024');
+    formData.append('n', '1');
+
+    const res = await safeFetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + STATE.openaiKey },
+      body: formData,
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      const friendly = res.status === 429
+        ? '額度用完或太頻繁，請稍後再試或檢查 OpenAI 帳戶餘額'
+        : parseGoogleError(txt);
+      throw new Error('OpenAI API 回 ' + res.status + '：' + friendly);
+    }
+    const data = await res.json();
+    const b64 = data?.data?.[0]?.b64_json;
+    if (!b64) throw new Error('OpenAI 回傳格式異常');
+    return 'data:image/png;base64,' + b64;
+  }
+
+  // 純文字生圖：/v1/images/generations
+  const res = await safeFetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + STATE.openaiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: 'gpt-image-1',
+      prompt,
+      size: '1024x1024',
+      n: 1,
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    const friendly = res.status === 429
+      ? '額度用完或太頻繁，請稍後再試'
+      : parseGoogleError(txt);
+    throw new Error('OpenAI API 回 ' + res.status + '：' + friendly);
+  }
+  const data = await res.json();
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) throw new Error('OpenAI 回傳格式異常');
+  return 'data:image/png;base64,' + b64;
+}
+
+async function dataUrlToBlob(dataUrl) {
+  const res = await fetch(dataUrl);
+  return await res.blob();
 }
 
 async function callGeminiImage({ prompt, useReference = true }) {
@@ -1135,7 +1307,9 @@ async function generateSelected() {
     alert('請先選擇至少一個表情');
     return;
   }
-  if (!STATE.apiKey) {
+  const currentKey = STATE.provider === 'openai' ? STATE.openaiKey : STATE.apiKey;
+  if (!currentKey) {
+    alert('請先在設定中填寫 ' + (STATE.provider === 'openai' ? 'OpenAI' : 'Gemini') + ' API Key');
     openSettings();
     return;
   }
@@ -1167,7 +1341,7 @@ async function generateSelected() {
       while (padded.length < 12) padded.push(selectedEmotions[padded.length % selectedEmotions.length]);
 
       const prompt = buildCollagePrompt(padded.slice(0, 12), themeText);
-      const rawDataUrl = await callGeminiImage({ prompt });
+      const rawDataUrl = await callImageAPI({ prompt });
       const slices = await sliceCollage(rawDataUrl, padded.slice(0, 12));
 
       for (const s of slices) {
@@ -1201,7 +1375,7 @@ async function generateSelected() {
           progress: Math.round((done + failed) / total * 100),
         });
         const prompt = buildStickerPrompt(emotion, themeText);
-        const rawDataUrl = await callGeminiImage({ prompt });
+        const rawDataUrl = await callImageAPI({ prompt });
         const finalUrl = await renderSticker({
           rawDataUrl,
           emotion,
@@ -1257,7 +1431,7 @@ async function retryOne(key) {
   renderResults();
   try {
     const prompt = buildStickerPrompt(emotion, themeText);
-    const rawDataUrl = await callGeminiImage({ prompt });
+    const rawDataUrl = await callImageAPI({ prompt });
     const finalUrl = await renderSticker({ rawDataUrl, emotion, removeBackground: true, addText: addOverlayText });
     STATE.results[key] = { dataUrl: finalUrl, dataUrlWithBg: rawDataUrl, emotion };
   } catch (e) {
@@ -1375,7 +1549,11 @@ async function generateIdeasFromImage() {
     alert('請先上傳照片');
     return;
   }
-  if (!STATE.apiKey) { openSettings(); return; }
+  if (!STATE.apiKey) {
+    alert('「從圖片取得靈感」需要 Gemini Key（即使你目前用 OpenAI 生成）。請在設定中填寫 Gemini Key。');
+    openSettings();
+    return;
+  }
 
   const btn = document.getElementById('ai-inspire-btn');
   const oldHtml = btn.innerHTML;
